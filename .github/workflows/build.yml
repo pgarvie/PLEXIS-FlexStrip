@@ -1,0 +1,31 @@
+name: Build VST3 (Windows)
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S . -B build -DFLEXSTRIP_BUILD_TESTS=ON
+
+      # Fast sanity check of the DSP core (synthetic signals) before the long JUCE build
+      - name: Build and run DSP tests
+        run: |
+          cmake --build build --config Release --target FlexStripDspTests
+          ./build/Release/FlexStripDspTests.exe
+
+      - name: Build VST3
+        run: cmake --build build --config Release --target PlexisFlexStrip_VST3 --parallel
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: PLEXIS-FlexStrip-VST3-Windows
+          path: build/PlexisFlexStrip_artefacts/Release/VST3/PLEXIS FlexStrip.vst3
+          if-no-files-found: error
